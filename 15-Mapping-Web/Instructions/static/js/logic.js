@@ -16,19 +16,30 @@ function createFeatures(earthquakeData) {
 	<hr><p>Magnitude: ${feature.properties.mag}</p>`);
   }
 
-  // Create a GeoJSON layer 
-  var earthquakes = L.geoJSON(earthquakeData, {
-    onEachFeature: onEachFeature,
-    style: function(earthquakeData) {
-      return {
-      stroke: false,
-      fillOpacity: 0.75,
-      color: "purple",
-      fillColor: "purple",
-      radius: 600000
-      };
+  var earthquakes = L.geoJson(earthquakeData, {
+    style: function(feature) {
+	  var depth = feature.geometry.coordinates[2];
+	  if (depth >= 50.0) {
+		return { color: "red" }; 
+	  } 
+	  else if (depth >= 15.0) {
+		return { color: "orange" };
+	  } 
+	  else {
+		return { color: "yellow" };
+	  }
+	},
+    pointToLayer: function(feature, latlng) {
+        return new L.CircleMarker(latlng, {
+        	radius: feature.properties.mag, 
+        	fillOpacity: 0.85
+        });
+    },
+    onEachFeature: function (feature, layer) {
+		layer.bindPopup(`<h3>Location: ${feature.properties.place}</h3><hr><p>Date: ${new Date(feature.properties.time)}</p>
+		<hr><p>Magnitude: ${feature.properties.mag}</p>`);
     }
-  });
+});
 
   // Plug our earthquake layer into the create map function
   createMap(earthquakes);
@@ -69,5 +80,32 @@ function createMap(earthquakes) {
   L.control.layers(baseMaps, overlayMaps, {
     collapsed: false
   }).addTo(myMap);
+  
+  
+  // Set up the legend.
+  var legend = L.control({ position: "bottomright" });
+  legend.onAdd = function() {
+    var div = L.DomUtil.create("div", "info legend");
+    var limits = [10,15,50];
+    var labels = [];
 
+
+    var legendInfo = "<h1>Magnitude</h1>" +
+      "<div class=\"labels\">" +
+        "<div class=\"min\">mag < 10</div>" +
+        "<div class=\"max\">mag > 50</div>" +
+      "</div>";
+
+    div.innerHTML = legendInfo;
+
+    limits.forEach(function(limit, index) {
+      labels.push("<li style=\"background-color:['yellow','orange','red']\"></li>");
+    });
+
+    div.innerHTML += "<ul>" + labels.join("") + "</ul>";
+    return div;
+  };
+
+  // Add the legend
+  legend.addTo(myMap);
 }
